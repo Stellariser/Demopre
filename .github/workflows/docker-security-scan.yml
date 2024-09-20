@@ -35,7 +35,7 @@ jobs:
 
     # Step 5: 使用 Trivy 扫描 Docker 镜像
     - name: Run Trivy to scan the image for vulnerabilities
-      uses: aquasecurity/trivy-action@v0.17.0  # 使用 Trivy 的稳定版本
+      uses: aquasecurity/trivy-action@v0  # 使用 Trivy 的稳定版本
       with:
         image-ref: my-image:latest
         format: 'table'  # 以表格格式生成扫描报告
