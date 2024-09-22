@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  trivy-scan:
+  trivy-docker_bench-scan:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
