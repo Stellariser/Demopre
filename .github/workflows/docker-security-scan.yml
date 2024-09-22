@@ -56,8 +56,10 @@ jobs:
         SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
         SLACK_CHANNEL: '#trivy'
       run: |
-        curl -F file=@/github/workspace/trivy-report.txt \
+        # 使用当前目录的路径上传文件
+        curl -F file=@trivy-report.txt \
              -F "initial_comment=Here is the Trivy scan report for the latest build." \
              -F channels=$SLACK_CHANNEL \
              -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
              https://slack.com/api/files.upload
+
