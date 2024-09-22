@@ -46,6 +46,7 @@ jobs:
         path: trivy-report.txt
     - name: Print working directory and list files
       run: |
+
         echo "Current directory:"
         pwd
         echo "Files in current directory:"
