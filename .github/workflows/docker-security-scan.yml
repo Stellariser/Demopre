@@ -45,13 +45,13 @@ jobs:
         path: trivy-report.txt
 
     - name: Upload Trivy Report to Slack
-        if: always()
-        env:
-          SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
-          SLACK_CHANNEL: '#trivy'
-        run: |
-          curl -F file=@trivy-report.txt \
-               -F "initial_comment=Here is the Trivy scan report for the latest build." \
-               -F channels=$SLACK_CHANNEL \
-               -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
-               https://slack.com/api/files.upload
+      if: always()
+      env:
+        SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
+        SLACK_CHANNEL: '#trivy'
+      run: |
+        curl -F file=@trivy-report.txt \
+              -F "initial_comment=Here is the Trivy scan report for the latest build." \
+              -F channels=$SLACK_CHANNEL \
+              -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
+              https://slack.com/api/files.upload
