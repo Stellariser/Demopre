@@ -32,6 +32,7 @@ jobs:
       with:
         image-ref: my-image:latest
         format: 'table'
+        output: /github/workspace/trivy-report.txt
         exit-code: '0'  # 将 exit-code 设置为 0，不让构建因漏洞而失败
         ignore-unfixed: true
         vuln-type: 'os,library'
