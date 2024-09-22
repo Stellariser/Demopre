@@ -51,6 +51,7 @@ jobs:
         echo "Files in current directory:"
         ls -al
 
+
     - name: Get Slack Upload URL
       if: always()
       env:
@@ -64,6 +65,8 @@ jobs:
         FILE_ID=$(echo $RESPONSE | jq -r '.file_id')
         echo "UPLOAD_URL=$UPLOAD_URL" >> $GITHUB_ENV
         echo "FILE_ID=$FILE_ID" >> $GITHUB_ENV
+
+
     - name: Upload File to Slack
       if: always()
       env:
@@ -72,6 +75,8 @@ jobs:
         curl -X POST \
           -F filename=@trivy-report.txt \
           $UPLOAD_URL
+
+
     - name: Complete Slack Upload
       if: always()
       env:
@@ -79,8 +84,12 @@ jobs:
         FILE_ID: ${{ env.FILE_ID }}
       run: |
         curl -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
-          --data "file_id=$FILE_ID" \
+          --data-urlencode "file_id=$FILE_ID" \
+          --data-urlencode "files[0][id]=$FILE_ID" \
+          --data-urlencode "files[0][title]=Trivy Scan Report" \
           https://slack.com/api/files.completeUploadExternal
+
+
     - name: Send Slack Message with File
       if: always()
       env:
@@ -108,7 +117,6 @@ jobs:
                 ]
             }" \
             https://slack.com/api/chat.postMessage
-
 
 
 
