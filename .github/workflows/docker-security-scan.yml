@@ -43,25 +43,25 @@ jobs:
         sudo chown runner:docker trivy-report.txt
         sudo chmod 644 trivy-report.txt
 
-    - name: Read Trivy Report Content
-      id: read_report
-      run: |
-        REPORT_CONTENT=$(cat trivy-report.txt)
-        REPORT_CONTENT_JSON=$(echo "$REPORT_CONTENT" | jq -Rs .)
-        echo "REPORT_CONTENT=$REPORT_CONTENT_JSON" >> $GITHUB_ENV
+    - name: Upload Trivy Report as Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: trivy-report
+        path: trivy-report.txt
 
-    - name: Send Trivy Report to Slack
+    - name: Send Artifact Link to Slack
       if: always()
       env:
         SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
         SLACK_CHANNEL: '#trivy'
-        REPORT_CONTENT: ${{ env.REPORT_CONTENT }}
       run: |
+
+        RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         curl -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
             -H 'Content-type: application/json' \
             --data "{
                 \"channel\":\"$SLACK_CHANNEL\",
-                \"text\":\"Here is the Trivy scan report:\n$REPORT_CONTENT\"
+                \"text\":\"The Trivy scan has completed. You can download the full report from the GitHub Actions artifacts: $RUN_URL\"
             }" \
             https://slack.com/api/chat.postMessage
 
