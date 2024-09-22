@@ -38,6 +38,18 @@ jobs:
         vuln-type: 'os,library'
         severity: 'HIGH,CRITICAL'
 
+      - name: Run Docker Bench Security
+        run: |
+          docker run -it --net host --pid host --userns host --cap-add audit_control \
+          -e DOCKER_CONTENT_TRUST=$DOCKER_CONTENT_TRUST \
+          -v /var/lib:/var/lib \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v /usr/lib/systemd:/usr/lib/systemd \
+          -v /etc:/etc \
+          --label docker_bench_security \
+          docker/docker-bench-security > dockerbench-report.txt
+
+
     - name: Fix file permissions
       run: |
         sudo chown runner:docker trivy-report.txt
@@ -48,7 +60,11 @@ jobs:
       with:
         name: trivy-report
         path: trivy-report.txt
-
+    - name: Upload Docker Bench scan results
+        uses: actions/upload-artifact@v3
+        with:
+          name: dockerbench-report
+          path: dockerbench-report.txt
     - name: Send Artifact Link to Slack
       if: always()
       env:
@@ -64,7 +80,17 @@ jobs:
                 \"text\":\"The Trivy scan has completed. You can download the full report from the GitHub Actions artifacts: $RUN_URL\"
             }" \
             https://slack.com/api/chat.postMessage
-
+    - name: Upload Docker Bench Report to Slack
+      if: always()
+      env:
+        SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
+        SLACK_CHANNEL: '#dockerbench'
+      run: |
+        curl -F file=@dockerbench-report.txt \
+              -F "initial_comment=Here is the Docker Bench security report." \
+              -F channels=$SLACK_CHANNEL \
+              -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
+              https://slack.com/api/files.upload
 
 
 
