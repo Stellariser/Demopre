@@ -51,19 +51,64 @@ jobs:
         echo "Files in current directory:"
         ls -al
 
-    - name: Upload Trivy Report to Slack
+    - name: Get Slack Upload URL
+      if: always()
+      env:
+        SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
+      run: |
+        RESPONSE=$(curl -s -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
+          --data "filename=trivy-report.txt&length=$(stat --format=%s trivy-report.txt)" \
+          https://slack.com/api/files.getUploadURLExternal)
+        echo $RESPONSE
+        UPLOAD_URL=$(echo $RESPONSE | jq -r '.upload_url')
+        FILE_ID=$(echo $RESPONSE | jq -r '.file_id')
+        echo "UPLOAD_URL=$UPLOAD_URL" >> $GITHUB_ENV
+        echo "FILE_ID=$FILE_ID" >> $GITHUB_ENV
+    - name: Upload File to Slack
+      if: always()
+      env:
+        UPLOAD_URL: ${{ env.UPLOAD_URL }}
+      run: |
+        curl -X POST \
+          -F filename=@trivy-report.txt \
+          $UPLOAD_URL
+    - name: Complete Slack Upload
+      if: always()
+      env:
+        SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
+        FILE_ID: ${{ env.FILE_ID }}
+      run: |
+        curl -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
+          --data "file_id=$FILE_ID" \
+          https://slack.com/api/files.completeUploadExternal
+    - name: Send Slack Message with File
       if: always()
       env:
         SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
         SLACK_CHANNEL: '#trivy'
+        FILE_ID: ${{ env.FILE_ID }}
       run: |
-        RESPONSE=$(curl -s -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
-             -F "file=@trivy-report.txt" \
-             -F "initial_comment=Here is the Trivy scan report for the latest build." \
-             -F "channels=$SLACK_CHANNEL" \
-             https://slack.com/api/files.upload)
-        echo "Response from Slack:"
-        echo $RESPONSE
+        curl -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
+            -H 'Content-type: application/json' \
+            --data "{
+                \"channel\":\"$SLACK_CHANNEL\",
+                \"text\":\"Here is the Trivy scan report for the latest build.\",
+                \"attachments\": [
+                    {
+                        \"text\": \"Click to view the report\",
+                        \"fallback\": \"View the report\",
+                        \"actions\": [
+                            {
+                                \"type\": \"button\",
+                                \"text\": \"View Report\",
+                                \"url\": \"https://slack.com/files/$FILE_ID\"
+                            }
+                        ]
+                    }
+                ]
+            }" \
+            https://slack.com/api/chat.postMessage
+
 
 
 
