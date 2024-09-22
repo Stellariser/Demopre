@@ -48,29 +48,29 @@ jobs:
         --label docker_bench_security \
         docker/docker-bench-security > dockerbench-report.txt
 
-
     - name: Fix file permissions
       run: |
-        sudo chown runner:docker trivy-report.txt
-        sudo chmod 644 trivy-report.txt
+        sudo chown runner:docker trivy-report.txt dockerbench-report.txt
+        sudo chmod 644 trivy-report.txt dockerbench-report.txt
 
     - name: Upload Trivy Report as Artifact
       uses: actions/upload-artifact@v3
       with:
         name: trivy-report
         path: trivy-report.txt
+
     - name: Upload Docker Bench scan results
-        uses: actions/upload-artifact@v3
-        with:
-          name: dockerbench-report
-          path: dockerbench-report.txt
+      uses: actions/upload-artifact@v3
+      with:
+        name: dockerbench-report
+        path: dockerbench-report.txt
+
     - name: Send Artifact Link to Slack
       if: always()
       env:
         SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
         SLACK_CHANNEL: '#trivy'
       run: |
-
         RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         curl -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
             -H 'Content-type: application/json' \
@@ -79,6 +79,7 @@ jobs:
                 \"text\":\"The Trivy scan has completed. You can download the full report from the GitHub Actions artifacts: $RUN_URL\"
             }" \
             https://slack.com/api/chat.postMessage
+
     - name: Upload Docker Bench Report to Slack
       if: always()
       env:
