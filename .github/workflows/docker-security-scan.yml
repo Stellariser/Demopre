@@ -43,3 +43,32 @@ jobs:
       with:
         name: trivy-report
         path: trivy-report.txt
+
+    - name: Send Slack Notification
+      if: always()  # 无论成功还是失败都会发送通知
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      run: |
+        MESSAGE="*GitHub Actions Workflow Completed*"
+        STATUS="*Status*: ${{ job.status }}"
+        URL="*Workflow URL*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+        if [ "${{ job.status }}" == "success" ]; then
+          COLOR="#36a64f"
+        else
+          COLOR="#ff0000"
+        fi
+
+        curl -X POST -H 'Content-type: application/json' --data "{
+          \"attachments\": [
+            {
+              \"color\": \"$COLOR\",
+              \"pretext\": \"GitHub Actions Notification\",
+              \"title\": \"$MESSAGE\",
+              \"fields\": [
+                { \"title\": \"Status\", \"value\": \"$STATUS\", \"short\": true },
+                { \"title\": \"Workflow URL\", \"value\": \"$URL\", \"short\": false }
+              ]
+            }
+          ]
+        }" $SLACK_WEBHOOK_URL
