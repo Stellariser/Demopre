@@ -38,91 +38,33 @@ jobs:
         vuln-type: 'os,library'
         severity: 'HIGH,CRITICAL'
 
-    - name: Upload Trivy scan results
-      if: failure()
-      uses: actions/upload-artifact@v3
-      with:
-        name: trivy-report
-        path: trivy-report.txt
-    - name: Print working directory and list files
+    - name: Fix file permissions
       run: |
-        echo "Current directory:"
-        pwd
-        echo "Files in current directory:"
-        ls -al
+        sudo chown runner:docker trivy-report.txt
+        sudo chmod 644 trivy-report.txt
 
-
-    - name: Get Slack Upload URL
-      if: always()
-      env:
-        SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
+    # 读取 Trivy 报告内容并存储到环境变量中
+    - name: Read Trivy Report Content
+      id: read_report
       run: |
-        RESPONSE=$(curl -s -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
-          --data "filename=trivy-report.txt&length=$(stat --format=%s trivy-report.txt)" \
-          https://slack.com/api/files.getUploadURLExternal)
-        echo $RESPONSE
-        UPLOAD_URL=$(echo $RESPONSE | jq -r '.upload_url')
-        FILE_ID=$(echo $RESPONSE | jq -r '.file_id')
-        echo "UPLOAD_URL=$UPLOAD_URL" >> $GITHUB_ENV
-        echo "FILE_ID=$FILE_ID" >> $GITHUB_ENV
+        REPORT_CONTENT=$(cat trivy-report.txt)
+        # 截断消息到合理长度，避免超过 Slack API 限制（4000字符）
+        REPORT_CONTENT_TRIMMED=$(echo "$REPORT_CONTENT" | cut -c 1-4000)
+        echo "REPORT_CONTENT=$REPORT_CONTENT_TRIMMED" >> $GITHUB_ENV
 
-
-    - name: Upload File to Slack
-      if: always()
-      env:
-        UPLOAD_URL: ${{ env.UPLOAD_URL }}
-      run: |
-        curl -X POST \
-          -F filename=@trivy-report.txt \
-          $UPLOAD_URL
-
-
-    - name: Complete Slack Upload
-      if: always()
-      env:
-        SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
-        FILE_ID: ${{ env.FILE_ID }}
-      run: |
-        curl -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
-          -H "Content-Type: application/json" \
-          --data '{
-            "file_id": "'$FILE_ID'",
-            "files": [
-              {
-                "id": "'$FILE_ID'",
-                "title": "Trivy Scan Report"
-              }
-            ]
-          }' \
-          https://slack.com/api/files.completeUploadExternal
-
-
-
-    - name: Send Slack Message with File
+    # 发送报告内容到 Slack 频道
+    - name: Send Trivy Report to Slack
       if: always()
       env:
         SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
         SLACK_CHANNEL: '#trivy'
-        FILE_ID: ${{ env.FILE_ID }}
+        REPORT_CONTENT: ${{ env.REPORT_CONTENT }}
       run: |
         curl -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
             -H 'Content-type: application/json' \
             --data "{
                 \"channel\":\"$SLACK_CHANNEL\",
-                \"text\":\"Here is the Trivy scan report for the latest build.\",
-                \"attachments\": [
-                    {
-                        \"text\": \"Click to view the report\",
-                        \"fallback\": \"View the report\",
-                        \"actions\": [
-                            {
-                                \"type\": \"button\",
-                                \"text\": \"View Report\",
-                                \"url\": \"https://slack.com/files/$FILE_ID\"
-                            }
-                        ]
-                    }
-                ]
+                \"text\":\"Here is the Trivy scan report:\n$REPORT_CONTENT\"
             }" \
             https://slack.com/api/chat.postMessage
 
