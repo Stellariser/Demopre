@@ -84,10 +84,18 @@ jobs:
         FILE_ID: ${{ env.FILE_ID }}
       run: |
         curl -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
-          --data-urlencode "file_id=$FILE_ID" \
-          --data-urlencode "files[0][id]=$FILE_ID" \
-          --data-urlencode "files[0][title]=Trivy Scan Report" \
+          -H "Content-Type: application/json" \
+          --data '{
+            "file_id": "'$FILE_ID'",
+            "files": [
+              {
+                "id": "'$FILE_ID'",
+                "title": "Trivy Scan Report"
+              }
+            ]
+          }' \
           https://slack.com/api/files.completeUploadExternal
+
 
 
     - name: Send Slack Message with File
