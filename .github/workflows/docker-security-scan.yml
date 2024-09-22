@@ -43,16 +43,13 @@ jobs:
         sudo chown runner:docker trivy-report.txt
         sudo chmod 644 trivy-report.txt
 
-    # 读取 Trivy 报告内容并存储到环境变量中
     - name: Read Trivy Report Content
       id: read_report
       run: |
         REPORT_CONTENT=$(cat trivy-report.txt)
-        # 截断消息到合理长度，避免超过 Slack API 限制（4000字符）
-        REPORT_CONTENT_TRIMMED=$(echo "$REPORT_CONTENT" | cut -c 1-4000)
-        echo "REPORT_CONTENT=$REPORT_CONTENT_TRIMMED" >> $GITHUB_ENV
+        REPORT_CONTENT_JSON=$(echo "$REPORT_CONTENT" | jq -Rs .)
+        echo "REPORT_CONTENT=$REPORT_CONTENT_JSON" >> $GITHUB_ENV
 
-    # 发送报告内容到 Slack 频道
     - name: Send Trivy Report to Slack
       if: always()
       env:
@@ -67,6 +64,7 @@ jobs:
                 \"text\":\"Here is the Trivy scan report:\n$REPORT_CONTENT\"
             }" \
             https://slack.com/api/chat.postMessage
+
 
 
 
