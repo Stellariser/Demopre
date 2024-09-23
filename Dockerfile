@@ -2,8 +2,9 @@
 FROM python:3.9-slim
 
 # Set a non-root user
-RUN useradd -ms /bin/bash myuser
-USER myuser
+# As root
+#RUN useradd -ms /bin/bash myuser
+#USER myuser
 
 # Copy only necessary files
 WORKDIR /app
@@ -13,7 +14,7 @@ COPY app.py requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose only required ports
-EXPOSE 8080
+EXPOSE 8080 3306 22  #暴露了多个端口
 
 # Run the application
 CMD ["python", "app.py"]
