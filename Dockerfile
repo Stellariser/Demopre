@@ -14,7 +14,7 @@ COPY app.py requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose only required ports
-EXPOSE 8080 3306 22  #暴露了多个端口
+EXPOSE 8080 3306
 
 # Run the application
 CMD ["python", "app.py"]
