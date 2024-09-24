@@ -26,13 +26,14 @@ jobs:
 
     - name: Build Docker image
       run: docker build -t my-image:latest .
+    
     - name: Run Trivy to scan the image for vulnerabilities
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: my-image:latest
         format: 'table'
         output: /github/workspace/trivy-report.txt
-        exit-code: '0'  # 将 exit-code 设置为 0，不让构建因漏洞而失败
+        exit-code: '1' # Fail if HIGH or CRITICAL vulnerabilities are found
         ignore-unfixed: true
         vuln-type: 'os,library'
         severity: 'HIGH,CRITICAL'
@@ -47,6 +48,14 @@ jobs:
         -v /etc:/etc \
         --label docker_bench_security \
         docker/docker-bench-security > dockerbench-report.txt
+
+    # Fail if any high-risk findings in Docker Bench report
+    - name: Fail if high security risks are found in Docker Bench report
+      run: |
+        if grep -E "WARN|ERROR" dockerbench-report.txt; then
+          echo "Security risks found in Docker Bench report" >&2
+          exit 1
+        fi
 
 
     - name: Fix file permissions
