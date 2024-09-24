@@ -28,6 +28,17 @@ jobs:
     - name: Build Docker image
       run: docker build -t my-image:latest .
 
+    # Save the Docker image as a tar file
+    - name: Save Docker image
+      run: docker save my-image:latest -o my-image.tar
+
+    # Upload the saved Docker image as an artifact
+    - name: Upload Docker image artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: my-image
+        path: my-image.tar
+
   # Job for running Trivy scan
   trivy-scan:
     runs-on: ubuntu-latest
@@ -35,6 +46,15 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+
+    # Download the Docker image artifact built in the previous job
+    - name: Download Docker image
+      uses: actions/download-artifact@v3
+      with:
+        name: my-image
+
+    - name: Load Docker image
+      run: docker load -i my-image.tar
 
     - name: Run Trivy to scan the image for vulnerabilities
       uses: aquasecurity/trivy-action@master
@@ -83,6 +103,15 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+
+    # Download the Docker image artifact built in the previous job
+    - name: Download Docker image
+      uses: actions/download-artifact@v3
+      with:
+        name: my-image
+
+    - name: Load Docker image
+      run: docker load -i my-image.tar
 
     - name: Run Docker Bench Security
       run: |
