@@ -2,14 +2,18 @@
 FROM python:3.9-slim
 
 # Set a non-root user
-# As root
+# Run commands as root
+USER root
+
 # Update system packages and upgrade libexpat1 to fix security vulnerabilities
-RUN useradd -ms /bin/bash myuser \
-    apt-get update && apt-get install --no-install-recommends -y \
-    libexpat1 && \
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y libexpat1 && \
     apt-get upgrade -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Add a non-root user and switch to the user
+RUN useradd -ms /bin/bash myuser
 USER myuser
 
 
