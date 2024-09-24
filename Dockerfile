@@ -3,8 +3,8 @@ FROM python:3.9-slim
 
 # Set a non-root user
 # As root
-#RUN useradd -ms /bin/bash myuser
-#USER myuser
+RUN useradd -ms /bin/bash myuser
+USER myuser
 
 # Update system packages and upgrade libexpat1 to fix security vulnerabilities
 RUN apt-get update && apt-get install --no-install-recommends -y \

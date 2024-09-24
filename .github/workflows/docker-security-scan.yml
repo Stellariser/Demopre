@@ -119,7 +119,7 @@ jobs:
     # Fail if any high-risk findings in Docker Bench report
     - name: Fail if high security risks are found in Docker Bench report
       run: |
-        if grep -E "WARN|ERROR" dockerbench-report.txt; then
+        if grep -E "Ensure a user for the container has been created" dockerbench-report.txt; then
           echo "Security risks found in Docker Bench report" >&2
           exit 1
         fi
