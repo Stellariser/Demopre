@@ -6,6 +6,13 @@ FROM python:3.9-slim
 #RUN useradd -ms /bin/bash myuser
 #USER myuser
 
+# Update system packages and upgrade libexpat1 to fix security vulnerabilities
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    libexpat1 && \
+    apt-get upgrade -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 
 # Copy only necessary files
 WORKDIR /app
