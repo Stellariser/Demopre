@@ -9,7 +9,8 @@ on:
       - main
 
 jobs:
-  trivy-docker_bench-scan:
+  # Job for building the Docker image
+  build:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -26,7 +27,33 @@ jobs:
 
     - name: Build Docker image
       run: docker build -t my-image:latest .
-    
+
+    # Store the built image as an artifact for other jobs to use
+    - name: Save Docker image
+      uses: actions/upload-artifact@v3
+      with:
+        name: my-image
+        path: my-image.tar
+      run: |
+        docker save my-image:latest -o my-image.tar
+
+  # Job for running Trivy scan
+  trivy-scan:
+    runs-on: ubuntu-latest
+    needs: build # This ensures the image is built before this job runs
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Download the Docker image artifact built in the previous job
+    - name: Download Docker image
+      uses: actions/download-artifact@v3
+      with:
+        name: my-image
+
+    - name: Load Docker image
+      run: docker load -i my-image.tar
+
     - name: Run Trivy to scan the image for vulnerabilities
       uses: aquasecurity/trivy-action@master
       with:
@@ -37,6 +64,44 @@ jobs:
         ignore-unfixed: true
         vuln-type: 'os,library'
         severity: 'CRITICAL'
+
+    - name: Upload Trivy Report as Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: trivy-report
+        path: trivy-report.txt
+
+    - name: Send Artifact Link to Slack
+      if: always()
+      env:
+        SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
+        SLACK_CHANNEL: '#trivy'
+      run: |
+        RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        curl -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
+            -H 'Content-type: application/json' \
+            --data "{
+                \"channel\":\"$SLACK_CHANNEL\",
+                \"text\":\"The Trivy scan has completed. You can download the full report from the GitHub Actions artifacts: $RUN_URL\"
+            }" \
+            https://slack.com/api/chat.postMessage
+
+  # Job for running Docker Bench Security scan
+  dockerbench-scan:
+    runs-on: ubuntu-latest
+    needs: build # This ensures the image is built before this job runs
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Download the Docker image artifact built in the previous job
+    - name: Download Docker image
+      uses: actions/download-artifact@v3
+      with:
+        name: my-image
+
+    - name: Load Docker image
+      run: docker load -i my-image.tar
 
     - name: Run Docker Bench Security
       run: |
@@ -57,38 +122,11 @@ jobs:
           exit 1
         fi
 
-
-    - name: Fix file permissions
-      run: |
-        sudo chown runner:docker trivy-report.txt dockerbench-report.txt
-        sudo chmod 644 trivy-report.txt dockerbench-report.txt
-
-    - name: Upload Trivy Report as Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: trivy-report
-        path: trivy-report.txt
-
     - name: Upload Docker Bench scan results
       uses: actions/upload-artifact@v3
       with:
         name: dockerbench-report
         path: dockerbench-report.txt
-
-    - name: Send Artifact Link to Slack
-      if: always()
-      env:
-        SLACK_OAUTH_TOKEN: ${{ secrets.SLACK_OAUTH_TOKEN }}
-        SLACK_CHANNEL: '#trivy'
-      run: |
-        RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        curl -X POST -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
-            -H 'Content-type: application/json' \
-            --data "{
-                \"channel\":\"$SLACK_CHANNEL\",
-                \"text\":\"The Trivy scan has completed. You can download the full report from the GitHub Actions artifacts: $RUN_URL\"
-            }" \
-            https://slack.com/api/chat.postMessage
 
     - name: Upload Docker Bench Report to Slack
       if: always()
@@ -101,6 +139,3 @@ jobs:
               -F channels=$SLACK_CHANNEL \
               -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
               https://slack.com/api/files.upload
-
-
-
