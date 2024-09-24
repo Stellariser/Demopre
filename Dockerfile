@@ -25,7 +25,7 @@ COPY app.py requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose only required ports
-EXPOSE 80 3306
+EXPOSE 8080 3306
 
 
 # Run the application
