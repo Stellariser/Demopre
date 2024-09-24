@@ -28,14 +28,14 @@ jobs:
     - name: Build Docker image
       run: docker build -t my-image:latest .
 
-    # Store the built image as an artifact for other jobs to use
-    - name: Save Docker image
+    # Save the Docker image as a tar file and upload as an artifact
+    - name: Save and upload Docker image
+      run: |
+        docker save my-image:latest -o my-image.tar
       uses: actions/upload-artifact@v3
       with:
         name: my-image
         path: my-image.tar
-      run: |
-        docker save my-image:latest -o my-image.tar
 
   # Job for running Trivy scan
   trivy-scan:
