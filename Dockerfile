@@ -6,6 +6,7 @@ FROM python:3.9-slim
 #RUN useradd -ms /bin/bash myuser
 #USER myuser
 
+
 # Copy only necessary files
 WORKDIR /app
 COPY app.py requirements.txt /app/
