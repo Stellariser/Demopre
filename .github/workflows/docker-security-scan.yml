@@ -62,11 +62,10 @@ jobs:
         image-ref: my-image:latest
         format: 'table'
         output: /github/workspace/trivy-report.txt
-        exit-code: '1' # Fail if HIGH or CRITICAL vulnerabilities are found
+        exit-code: '0'  # Don't fail immediately, let the report be processed
         ignore-unfixed: true
         vuln-type: 'os,library'
         severity: 'HIGH, CRITICAL'
-      continue-on-error: true
 
     - name: Upload Trivy Report as Artifact
       uses: actions/upload-artifact@v3
@@ -88,6 +87,14 @@ jobs:
                 \"text\":\"The Trivy scan has completed. You can download the full report from the GitHub Actions artifacts: $RUN_URL\"
             }" \
             https://slack.com/api/chat.postMessage
+    
+    # Check for vulnerabilities and fail if CRITICAL ones are found
+    - name: Check for Critical Vulnerabilities in Trivy Report
+      run: |
+        if grep "CRITICAL" /github/workspace/trivy-report.txt; then
+          echo "Critical vulnerabilities found!" >&2
+          exit 1
+        fi
 
   # Job for running Docker Bench Security scan
   dockerbench-scan:
@@ -116,15 +123,6 @@ jobs:
         -v /etc:/etc \
         --label docker_bench_security \
         docker/docker-bench-security > dockerbench-report.txt
-      continue-on-error: true
-
-    # Fail if any high-risk findings in Docker Bench report
-    - name: Fail if high security risks are found in Docker Bench report
-      run: |
-        if grep -E "Ensure only needed ports are open on the container" dockerbench-report.txt; then
-          echo "Security risks found in Docker Bench report" >&2
-          exit 1
-        fi
 
     - name: Upload Docker Bench scan results
       uses: actions/upload-artifact@v3
@@ -143,3 +141,11 @@ jobs:
               -F channels=$SLACK_CHANNEL \
               -H "Authorization: Bearer $SLACK_OAUTH_TOKEN" \
               https://slack.com/api/files.upload
+    
+    # Fail if any high-risk findings in Docker Bench report
+    - name: Fail if high security risks are found in Docker Bench report
+      run: |
+        if grep -E "Ensure only needed ports are open on the container" dockerbench-report.txt; then
+          echo "Security risks found in Docker Bench report" >&2
+          exit 1
+        fi
