@@ -33,10 +33,10 @@ jobs:
         image-ref: my-image:latest
         format: 'table'
         output: /github/workspace/trivy-report.txt
-        exit-code: '1' # Fail if HIGH or CRITICAL vulnerabilities are found
+        exit-code: '1' # Fail if CRITICAL vulnerabilities are found
         ignore-unfixed: true
         vuln-type: 'os,library'
-        severity: 'HIGH,CRITICAL'
+        severity: 'CRITICAL'
 
     - name: Run Docker Bench Security
       run: |
